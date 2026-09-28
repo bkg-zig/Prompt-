@@ -118,15 +118,16 @@ export const PromptInputArea: React.FC<PromptInputAreaProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-sm text-zinc-100 space-y-4">
+    <div className="cyber-panel p-5 space-y-4 font-mono">
       {/* Top row: Presets */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">
-            Schnell-Vorlagen / Typische Aufgaben
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#00f6ff] font-mono flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f6ff] led-pulse inline-block" />
+            MISSION TEMPLATES // SCHNELL-VORLAGEN
           </span>
-          <span className="text-xs text-zinc-500 font-mono">
-            Ctrl + Enter zum Kompilieren
+          <span className="text-xs text-[#78909c] font-mono">
+            [CTRL + ENTER] EXECUTE
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -137,7 +138,7 @@ export const PromptInputArea: React.FC<PromptInputAreaProps> = ({
                 onChangeInput(preset.prompt);
                 onSelectMode(preset.mode);
               }}
-              className="px-2.5 py-1 text-xs text-left bg-zinc-800/80 hover:bg-zinc-800 hover:text-white border border-zinc-700/60 rounded text-zinc-300 transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+              className="px-2.5 py-1 text-xs text-left bg-[#080d12] hover:bg-[#0b1118] hover:text-[#00f6ff] border border-[#17252d] hover:border-[#007f87] rounded-xs text-[#78909c] transition-colors focus-visible:ring-1 focus-visible:ring-[#00f6ff] focus-visible:outline-none"
             >
               {preset.title}
             </button>
@@ -148,11 +149,12 @@ export const PromptInputArea: React.FC<PromptInputAreaProps> = ({
       {/* Main Prompt Input Area */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label htmlFor="user-prompt" className="text-xs font-semibold text-zinc-300 font-mono">
-            Aufgabenstellung / Natürliche Anweisung (Benutzereingabe)
+          <label htmlFor="user-prompt" className="text-xs font-semibold text-[#d7faff] font-mono flex items-center gap-1.5">
+            <span className="text-[#00f6ff] font-bold">&gt;</span>
+            <span>TASK SPECIFICATION // BENUTZEREINGABE</span>
           </label>
-          <span className="text-xs text-zinc-500 font-mono">
-            {inputPrompt.length} Zeichen
+          <span className="text-xs text-[#78909c] font-mono">
+            LEN://{inputPrompt.length} CHARS
           </span>
         </div>
 
@@ -162,8 +164,8 @@ export const PromptInputArea: React.FC<PromptInputAreaProps> = ({
           onChange={(e) => onChangeInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={4}
-          placeholder="z.B. Mach bKGForge production ready und übernimm die guten Ideen aus den Vendor-Projekten."
-          className="w-full bg-zinc-950 border border-zinc-700/90 rounded-lg p-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono transition-colors resize-y min-h-[96px]"
+          placeholder="> Enter mission objective (z.B. Mach bKGForge production ready und übernimm die guten Ideen aus den Vendor-Projekten)..."
+          className="w-full bg-[#030609] border border-[#1a3138] rounded-xs p-3 text-sm text-[#d7faff] placeholder:text-[#40515b] focus:outline-none focus:border-[#00f6ff] focus:shadow-[0_0_8px_rgba(0,246,255,0.25)] font-mono transition-colors resize-y min-h-[96px]"
         />
       </div>
 
@@ -305,18 +307,18 @@ export const PromptInputArea: React.FC<PromptInputAreaProps> = ({
 
       {/* Primary Action Button */}
       <div className="pt-2 flex items-center justify-between">
-        <div className="text-xs text-zinc-500 font-mono flex items-center gap-1.5">
-          <Info className="w-3.5 h-3.5 text-zinc-400" />
-          <span>Analysiert, zerlegt in AST & erzeugt vollwertigen 8-Phasen-Prompt</span>
+        <div className="text-xs text-[#78909c] font-mono flex items-center gap-1.5">
+          <span className="text-[#00f6ff] font-bold">&gt;</span>
+          <span>PIPELINE://8-PHASEN AST KERNEL · ZERO-STUBS ENFORCED</span>
         </div>
 
         <button
           onClick={onCompile}
           disabled={isCompiling || !inputPrompt.trim()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-medium rounded-lg text-sm transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#00f6ff]/15 hover:bg-[#00f6ff]/25 border border-[#00f6ff] text-[#00f6ff] shadow-[0_0_12px_rgba(0,246,255,0.35)] disabled:opacity-40 disabled:border-[#17252d] disabled:text-[#40515b] disabled:shadow-none font-bold rounded-xs text-xs tracking-wider transition-all focus-visible:ring-1 focus-visible:ring-[#00f6ff] focus-visible:outline-none uppercase"
         >
-          <Play className="w-4 h-4 fill-current" />
-          <span>{isCompiling ? 'Kompiliere Prompt...' : 'Master-Prompt kompilieren'}</span>
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>{isCompiling ? 'SYNTHESIZING PROMPT...' : 'MASTER-PROMPT KOMPILIEREN'}</span>
         </button>
       </div>
     </div>

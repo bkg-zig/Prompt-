@@ -1,138 +1,175 @@
-export type DiffType = 'equal' | 'added' | 'removed' | 'modified';
+import * as Diff from 'diff';
 
-export interface DiffLine {
-  type: DiffType;
+export type DiffLineType = 'added' | 'removed' | 'modified' | 'equal';
+
+export interface DiffWordPart {
+  value: string;
+  added?: boolean;
+  removed?: boolean;
+}
+
+export interface DetailedDiffLine {
+  type: DiffLineType;
   oldLineNumber?: number;
   newLineNumber?: number;
   text: string;
-  previousText?: string; // used when modified
+  previousText?: string;
+  wordDiff?: DiffWordPart[];
 }
 
-export interface DiffSummary {
-  addedCount: number;
-  removedCount: number;
-  modifiedCount: number;
-  unchangedCount: number;
+export interface DiffMetrics {
+  addedLinesCount: number;
+  removedLinesCount: number;
+  modifiedLinesCount: number;
+  unchangedLinesCount: number;
+  totalLinesCompared: number;
 }
 
 /**
- * Computes a detailed line-by-line diff between two text documents (LCS algorithm).
- * Detects additions, removals, modifications and unchanged lines.
+ * Uses the industry-standard `diff` library (Myers algorithm) with secondary
+ * word-level diffing to pinpoint precise added, removed, and modified line blocks.
  */
-export function computeLineDiff(oldText: string, newText: string): { lines: DiffLine[]; summary: DiffSummary } {
-  const oldLines = oldText ? oldText.split('\n') : [];
-  const newLines = newText ? newText.split('\n') : [];
-
-  const m = oldLines.length;
-  const n = newLines.length;
-
-  // LCS Matrix
-  // If inputs are very large, avoid quadratic memory overhead by capped size or standard DP
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1) as unknown as number[]);
-
-  for (let i = 0; i < m; i++) {
-    for (let j = 0; j < n; j++) {
-      if (oldLines[i] === newLines[j]) {
-        dp[i + 1][j + 1] = dp[i][j] + 1;
-      } else {
-        dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+export function generateVisualDiff(
+  oldStr: string,
+  newStr: string
+): { lines: DetailedDiffLine[]; metrics: DiffMetrics } {
+  if (!oldStr && !newStr) {
+    return {
+      lines: [],
+      metrics: {
+        addedLinesCount: 0,
+        removedLinesCount: 0,
+        modifiedLinesCount: 0,
+        unchangedLinesCount: 0,
+        totalLinesCompared: 0
       }
+    };
+  }
+
+  // 1. Compute structured line diff using the diff library
+  const changes = Diff.diffLines(oldStr || '', newStr || '', {
+    newlineIsToken: false,
+    ignoreWhitespace: false
+  });
+
+  const rawBlocks: { type: 'added' | 'removed' | 'equal'; lines: string[] }[] = [];
+
+  for (const part of changes) {
+    const splitLines = part.value.replace(/\r\n/g, '\n').split('\n');
+    // Drop the trailing empty string produced if ending with newline
+    if (splitLines.length > 0 && splitLines[splitLines.length - 1] === '') {
+      splitLines.pop();
+    }
+
+    if (part.added) {
+      rawBlocks.push({ type: 'added', lines: splitLines });
+    } else if (part.removed) {
+      rawBlocks.push({ type: 'removed', lines: splitLines });
+    } else {
+      rawBlocks.push({ type: 'equal', lines: splitLines });
     }
   }
 
-  // Backtrack to find diff ops
-  let i = m;
-  let j = n;
-  const rawDiff: { type: 'equal' | 'added' | 'removed'; oldIdx?: number; newIdx?: number; text: string }[] = [];
+  // 2. Synthesize blocks into line items, pairing adjacent removed + added into "modified" lines
+  const result: DetailedDiffLine[] = [];
+  let oldLineIdx = 1;
+  let newLineIdx = 1;
 
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      rawDiff.push({
-        type: 'equal',
-        oldIdx: i,
-        newIdx: j,
-        text: oldLines[i - 1]
-      });
-      i--;
-      j--;
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      rawDiff.push({
-        type: 'added',
-        newIdx: j,
-        text: newLines[j - 1]
-      });
-      j--;
-    } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
-      rawDiff.push({
-        type: 'removed',
-        oldIdx: i,
-        text: oldLines[i - 1]
-      });
-      i--;
-    }
-  }
+  let addedLinesCount = 0;
+  let removedLinesCount = 0;
+  let modifiedLinesCount = 0;
+  let unchangedLinesCount = 0;
 
-  rawDiff.reverse();
+  let bIdx = 0;
+  while (bIdx < rawBlocks.length) {
+    const currentBlock = rawBlocks[bIdx];
+    const nextBlock = rawBlocks[bIdx + 1];
 
-  // Second pass: Group adjacent removed and added lines into "modified" lines when they share semantic proximity
-  const result: DiffLine[] = [];
-  let addedCount = 0;
-  let removedCount = 0;
-  let modifiedCount = 0;
-  let unchangedCount = 0;
+    // Detect modified block (removed immediately followed by added)
+    if (currentBlock.type === 'removed' && nextBlock && nextBlock.type === 'added') {
+      const removedLines = currentBlock.lines;
+      const addedLines = nextBlock.lines;
+      const maxPair = Math.max(removedLines.length, addedLines.length);
 
-  let idx = 0;
-  while (idx < rawDiff.length) {
-    const curr = rawDiff[idx];
+      for (let i = 0; i < maxPair; i++) {
+        const remLine = removedLines[i];
+        const addLine = addedLines[i];
 
-    // Check if we have a removed followed immediately by an added line (or consecutive pair)
-    if (curr.type === 'removed' && idx + 1 < rawDiff.length && rawDiff[idx + 1].type === 'added') {
-      const next = rawDiff[idx + 1];
-      result.push({
-        type: 'modified',
-        oldLineNumber: curr.oldIdx,
-        newLineNumber: next.newIdx,
-        previousText: curr.text,
-        text: next.text
-      });
-      modifiedCount++;
-      idx += 2;
+        if (remLine !== undefined && addLine !== undefined) {
+          // Compute character/word-level diff between the two lines
+          const wordParts = Diff.diffWordsWithSpace(remLine, addLine);
+
+          result.push({
+            type: 'modified',
+            oldLineNumber: oldLineIdx++,
+            newLineNumber: newLineIdx++,
+            previousText: remLine,
+            text: addLine,
+            wordDiff: wordParts
+          });
+          modifiedLinesCount++;
+        } else if (remLine !== undefined) {
+          result.push({
+            type: 'removed',
+            oldLineNumber: oldLineIdx++,
+            text: remLine
+          });
+          removedLinesCount++;
+        } else if (addLine !== undefined) {
+          result.push({
+            type: 'added',
+            newLineNumber: newLineIdx++,
+            text: addLine
+          });
+          addedLinesCount++;
+        }
+      }
+      bIdx += 2;
       continue;
     }
 
-    if (curr.type === 'equal') {
-      result.push({
-        type: 'equal',
-        oldLineNumber: curr.oldIdx,
-        newLineNumber: curr.newIdx,
-        text: curr.text
-      });
-      unchangedCount++;
-    } else if (curr.type === 'added') {
-      result.push({
-        type: 'added',
-        newLineNumber: curr.newIdx,
-        text: curr.text
-      });
-      addedCount++;
-    } else if (curr.type === 'removed') {
-      result.push({
-        type: 'removed',
-        oldLineNumber: curr.oldIdx,
-        text: curr.text
-      });
-      removedCount++;
+    // Single block handling
+    if (currentBlock.type === 'equal') {
+      for (const line of currentBlock.lines) {
+        result.push({
+          type: 'equal',
+          oldLineNumber: oldLineIdx++,
+          newLineNumber: newLineIdx++,
+          text: line
+        });
+        unchangedLinesCount++;
+      }
+    } else if (currentBlock.type === 'added') {
+      for (const line of currentBlock.lines) {
+        result.push({
+          type: 'added',
+          newLineNumber: newLineIdx++,
+          text: line
+        });
+        addedLinesCount++;
+      }
+    } else if (currentBlock.type === 'removed') {
+      for (const line of currentBlock.lines) {
+        result.push({
+          type: 'removed',
+          oldLineNumber: oldLineIdx++,
+          text: line
+        });
+        removedLinesCount++;
+      }
     }
-    idx++;
+
+    bIdx++;
   }
 
   return {
     lines: result,
-    summary: {
-      addedCount,
-      removedCount,
-      modifiedCount,
-      unchangedCount
+    metrics: {
+      addedLinesCount,
+      removedLinesCount,
+      modifiedLinesCount,
+      unchangedLinesCount,
+      totalLinesCompared: result.length
     }
   };
 }

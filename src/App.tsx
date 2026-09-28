@@ -341,7 +341,7 @@ ${summary.dodChecklist.join('\n')}`;
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen cyber-grid text-[#d7faff] flex flex-col font-sans selection:bg-[#00f6ff] selection:text-[#020407]">
       {/* Global Header */}
       <Header
         currentMode={selectedMode}
@@ -380,80 +380,83 @@ ${summary.dodChecklist.join('\n')}`;
           onChangeRealVerification={setEnforceRealVerification}
         />
 
-        {/* View Navigation Tabs (Functional segmented controls following zero-pill rule) */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-          <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-lg border border-zinc-800">
+        {/* View Navigation Tabs (Cyberpunk Command Center style) */}
+        <div className="flex items-center justify-between border-b border-[#17252d] pb-2 font-mono">
+          <div className="flex items-center gap-1.5 p-1 bg-[#080d12] rounded-xs border border-[#17252d]">
             <button
               onClick={() => setActiveTab('prompt')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xs transition-colors focus-visible:ring-1 focus-visible:ring-[#00f6ff] focus-visible:outline-none uppercase ${
                 activeTab === 'prompt'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#00f6ff]/15 text-[#00f6ff] border border-[#00f6ff]/40 shadow-[0_0_8px_rgba(0,246,255,0.25)]'
+                  : 'text-[#78909c] hover:text-[#d7faff] hover:bg-[#0b1118]'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Generierter Master-Prompt</span>
+              <FileText className="w-3.5 h-3.5 text-[#00f6ff]" />
+              <span>Master-Prompt</span>
             </button>
 
             <button
               onClick={() => setActiveTab('structure')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xs transition-colors focus-visible:ring-1 focus-visible:ring-[#00f6ff] focus-visible:outline-none uppercase ${
                 activeTab === 'structure'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#00f6ff]/15 text-[#00f6ff] border border-[#00f6ff]/40 shadow-[0_0_8px_rgba(0,246,255,0.25)]'
+                  : 'text-[#78909c] hover:text-[#d7faff] hover:bg-[#0b1118]'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-sky-400" />
-              <span>Anforderungsstruktur (AST)</span>
+              <Layers className="w-3.5 h-3.5 text-[#00f6ff]" />
+              <span>Anforderungs-AST</span>
             </button>
 
             <button
               onClick={() => setActiveTab('audit')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xs transition-colors focus-visible:ring-1 focus-visible:ring-[#ff00e5] focus-visible:outline-none uppercase ${
                 activeTab === 'audit'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#ff00e5]/15 text-[#ff5cf2] border border-[#ff00e5]/40 shadow-[0_0_8px_rgba(255,0,229,0.25)]'
+                  : 'text-[#78909c] hover:text-[#d7faff] hover:bg-[#0b1118]'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-              <span>Qualitäts-Audit & Refinement</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#ff00e5]" />
+              <span>Audit & Refinement</span>
               {auditResult && (
-                <span className="text-[11px] font-mono text-zinc-400">
-                  ({auditResult.score}%)
+                <span className="text-[11px] font-mono text-[#ff5cf2]/90">
+                  [{auditResult.score}%]
                 </span>
               )}
             </button>
 
             <button
               onClick={() => setActiveTab('summary')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xs transition-colors focus-visible:ring-1 focus-visible:ring-[#ffb000] focus-visible:outline-none uppercase ${
                 activeTab === 'summary'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#ffb000]/15 text-[#ffd166] border border-[#ffb000]/40 shadow-[0_0_8px_rgba(255,176,0,0.25)]'
+                  : 'text-[#78909c] hover:text-[#d7faff] hover:bg-[#0b1118]'
               }`}
             >
-              <ListChecks className="w-3.5 h-3.5 text-amber-400" />
-              <span>Kompakte Zusammenfassung</span>
+              <ListChecks className="w-3.5 h-3.5 text-[#ffb000]" />
+              <span>Zusammenfassung</span>
             </button>
 
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xs transition-colors focus-visible:ring-1 focus-visible:ring-[#00f6ff] focus-visible:outline-none uppercase ${
                 activeTab === 'inventory'
-                  ? 'bg-zinc-800 text-white shadow-xs'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-[#00f6ff]/15 text-[#00f6ff] border border-[#00f6ff]/40 shadow-[0_0_8px_rgba(0,246,255,0.25)]'
+                  : 'text-[#78909c] hover:text-[#d7faff] hover:bg-[#0b1118]'
               }`}
             >
-              <Boxes className="w-3.5 h-3.5 text-emerald-400" />
+              <Boxes className="w-3.5 h-3.5 text-[#00f6ff]" />
               <span>Technische Inventur</span>
             </button>
           </div>
 
           {/* Quick status text */}
-          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-500 font-mono">
-            <span>Ziel: bKGForge</span>
-            <span aria-hidden="true" className="text-zinc-700">·</span>
-            <span className="text-emerald-400">8-Phasen-Workflow</span>
+          <div className="hidden md:flex items-center gap-2 text-xs text-[#78909c] font-mono">
+            <span>TARGET://bKGForge</span>
+            <span aria-hidden="true" className="text-[#17252d]">·</span>
+            <span className="text-[#39ff14] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#39ff14] led-pulse inline-block" />
+              8-PHASEN PIPELINE
+            </span>
           </div>
         </div>
 
@@ -461,6 +464,8 @@ ${summary.dodChecklist.join('\n')}`;
         <div>
           {activeTab === 'prompt' && (
             <GeneratedPromptView
+              masterPrompt={masterPrompt}
+              previousMasterPrompt={previousMasterPrompt}
               promptText={masterPrompt}
               previousPromptText={previousMasterPrompt}
               onCopy={handleCopyMasterPrompt}

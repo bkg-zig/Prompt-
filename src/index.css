@@ -1,1 +1,347 @@
 @import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BKG CYBERPUNK DESIGN SYSTEM — boilerplate.css
+   Version: 1.0  |  Scope: GLOBAL  |  Alle bkg-* Projekte
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Hintergründe — mehrere Ebenen für räumliche Tiefe */
+  --cyber-bg-deep:   #020407;
+  --cyber-bg:        #05070a;
+  --cyber-panel:     #080d12;
+  --cyber-panel-2:   #0b1118;
+  --cyber-panel-3:   #0e151d;
+
+  /* Neon Primär: CYAN */
+  --neon-cyan:        #00f6ff;
+  --neon-cyan-bright: #5cffff;
+  --neon-cyan-dark:   #007f87;
+  --neon-cyan-alpha:  rgba(0, 246, 255, 0.15);
+
+  /* Neon Sekundär: MAGENTA (AI/Agent) */
+  --neon-magenta:        #ff00e5;
+  --neon-magenta-bright: #ff5cf2;
+  --neon-magenta-dark:   #850078;
+  --neon-magenta-alpha:  rgba(255, 0, 229, 0.15);
+
+  /* WARNING: AMBER */
+  --neon-amber:        #ffb000;
+  --neon-amber-bright: #ffd166;
+  --neon-amber-alpha:  rgba(255, 176, 0, 0.15);
+
+  /* ERROR: RED */
+  --neon-red:        #ff1744;
+  --neon-red-bright: #ff4d6d;
+  --neon-red-alpha:  rgba(255, 23, 68, 0.15);
+
+  /* SUCCESS: ACID GREEN */
+  --neon-green:        #39ff14;
+  --neon-green-bright: #7cff5c;
+  --neon-green-alpha:  rgba(57, 255, 20, 0.15);
+
+  /* VIOLET (selten, Memory/Context) */
+  --neon-violet:        #9d4edd;
+  --neon-violet-bright: #c77dff;
+
+  /* ORANGE (selten, Performance) */
+  --neon-orange:        #ff6b00;
+  --neon-orange-bright: #ff9a3c;
+
+  /* Text */
+  --text-primary:   #d7faff;
+  --text-secondary: #78909c;
+  --text-muted:     #40515b;
+
+  /* Borders */
+  --border:         #17252d;
+  --border-hover:   #007f87;
+  --border-active:  #00f6ff;
+
+  /* Fonts */
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
+  --font-ui:   'Rajdhani', 'Share Tech', system-ui, sans-serif;
+
+  /* Spacing */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+
+  /* Border Radius */
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 6px;
+}
+
+body {
+  background: var(--cyber-bg);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+
+  /* Subtiles Grid-Overlay */
+  background-image:
+    linear-gradient(rgba(0, 246, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 246, 255, 0.018) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(0, 246, 255, 0.04), transparent 50%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  background-attachment: fixed;
+}
+
+/* Scanline-Overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0.012) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  opacity: 0.35;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+.text-cyan      { color: var(--neon-cyan); }
+.text-magenta   { color: var(--neon-magenta); }
+.text-green     { color: var(--neon-green); }
+.text-amber     { color: var(--neon-amber); }
+.text-red       { color: var(--neon-red); }
+
+/* ─── Panels ─────────────────────────────────────────────────────────────── */
+.cyber-panel {
+  background: var(--cyber-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cyber-panel:hover  { border-color: var(--border-hover); }
+.cyber-panel.active {
+  border-color: var(--border-active);
+  box-shadow:
+    0 0 8px rgba(0, 246, 255, 0.25),
+    inset 0 0 12px rgba(0, 246, 255, 0.035);
+}
+
+.cyber-panel-header {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--neon-cyan);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.45rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--neon-cyan-dark);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 6px rgba(0, 246, 255, 0.2);
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary {
+  border-color: var(--neon-cyan-dark);
+  color: var(--neon-cyan);
+}
+.btn-primary:hover:not(:disabled) {
+  background: rgba(0, 246, 255, 0.08);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
+}
+
+.btn-danger {
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--neon-red-alpha);
+  box-shadow: 0 0 8px rgba(255, 23, 68, 0.3);
+}
+
+.btn-ai {
+  border-color: var(--neon-magenta-dark);
+  color: var(--neon-magenta);
+}
+.btn-ai:hover:not(:disabled) {
+  background: rgba(255, 0, 229, 0.08);
+  box-shadow: 0 0 8px rgba(255, 0, 229, 0.3);
+}
+
+.btn-success {
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+}
+
+/* ─── Inputs ─────────────────────────────────────────────────────────────── */
+.cyber-input, input, textarea, select {
+  background: #030609;
+  color: var(--text-primary);
+  border: 1px solid #1a3138;
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cyber-input::placeholder,
+input::placeholder,
+textarea::placeholder { color: var(--text-muted); }
+
+.cyber-input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25);
+}
+
+/* ─── Status LEDs ────────────────────────────────────────────────────────── */
+.led {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.led-online   { background: var(--neon-green);   box-shadow: 0 0 5px var(--neon-green);   animation: led-pulse 2.5s ease-in-out infinite; }
+.led-busy     { background: var(--neon-cyan);    box-shadow: 0 0 5px var(--neon-cyan);    animation: led-pulse 1.5s ease-in-out infinite; }
+.led-ai       { background: var(--neon-magenta); box-shadow: 0 0 5px var(--neon-magenta); animation: led-pulse 1.8s ease-in-out infinite; }
+.led-idle     { background: var(--text-muted); }
+.led-warning  { background: var(--neon-amber);   box-shadow: 0 0 5px var(--neon-amber);   animation: led-pulse 1s ease-in-out infinite; }
+.led-error    { background: var(--neon-red);     box-shadow: 0 0 5px var(--neon-red);     animation: led-pulse 0.8s ease-in-out infinite; }
+.led-degraded { background: var(--neon-orange); }
+
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.badge-cyan    { background: rgba(0,246,255,.1);  color: var(--neon-cyan);    border: 1px solid rgba(0,246,255,.3); }
+.badge-magenta { background: rgba(255,0,229,.1);  color: var(--neon-magenta); border: 1px solid rgba(255,0,229,.3); }
+.badge-green   { background: rgba(57,255,20,.1);  color: var(--neon-green);   border: 1px solid rgba(57,255,20,.3); }
+.badge-amber   { background: rgba(255,176,0,.1);  color: var(--neon-amber);   border: 1px solid rgba(255,176,0,.3); }
+.badge-red     { background: rgba(255,23,68,.1);  color: var(--neon-red);     border: 1px solid rgba(255,23,68,.3); }
+.badge-muted   { background: rgba(64,81,91,.2);   color: var(--text-muted);   border: 1px solid var(--border); }
+
+/* ─── Visual Diff in .generated-prompt-view ─── */
+.generated-prompt-view {
+  position: relative;
+}
+
+/* Added lines with subtle green background */
+.diff-line-added,
+.generated-prompt-view .diff-line-added,
+.generated-prompt-view [data-diff-type="added"] {
+  background-color: rgba(57, 255, 20, 0.09) !important;
+  color: #7cff5c !important;
+  border-left: 3px solid #39ff14 !important;
+}
+
+/* Deleted lines with red background and strikethrough */
+.diff-line-removed,
+.generated-prompt-view .diff-line-removed,
+.generated-prompt-view [data-diff-type="removed"],
+.generated-prompt-view .diff-deleted-text {
+  background-color: rgba(255, 23, 68, 0.18) !important;
+  color: #ff4d6d !important;
+  text-decoration: line-through !important;
+  text-decoration-color: #ff1744 !important;
+  border-left: 3px solid #ff1744 !important;
+}
+
+/* Modified lines with yellow indicator */
+.diff-line-modified,
+.generated-prompt-view .diff-line-modified,
+.generated-prompt-view [data-diff-type="modified"] {
+  background-color: rgba(255, 176, 0, 0.09) !important;
+  color: #ffd166 !important;
+  border-left: 3px solid #ffb000 !important;
+}
+
+.diff-indicator-yellow,
+.generated-prompt-view .diff-indicator-yellow {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background-color: #ffb000;
+  box-shadow: 0 0 6px #ffb000;
+}
+
+/* ── Animations ── */
+@keyframes led-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes cyber-glow-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0,246,255,.3); }
+  50%       { box-shadow: 0 0 14px rgba(0,246,255,.6); }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "bKGForge Prompt-Creator",
+  "description": "Professioneller Prompt-Creator für bKGForge zur Erzeugung präziser, produktionsreifer Prompts für Coding-Agents nach strengen Architektur-, Rust- und Qualitätsrichtlinien.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

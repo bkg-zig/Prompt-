@@ -313,6 +313,41 @@ select:focus {
   border-left: 3px solid #ffb000 !important;
 }
 
+/* ── Inline Segment Decorators (Character-Level & Word-Level) ── */
+.diff-segment-added,
+.generated-prompt-view .diff-segment-added {
+  background-color: rgba(57, 255, 20, 0.22) !important;
+  color: #7cff5c !important;
+  border-bottom: 2px solid #39ff14 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  font-weight: 600;
+  display: inline;
+}
+
+.diff-segment-removed,
+.generated-prompt-view .diff-segment-removed {
+  background-color: rgba(255, 23, 68, 0.25) !important;
+  color: #ff4d6d !important;
+  text-decoration: line-through !important;
+  text-decoration-color: #ff1744 !important;
+  border-bottom: 2px solid #ff1744 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  display: inline;
+}
+
+.diff-segment-modified,
+.generated-prompt-view .diff-segment-modified {
+  background-color: rgba(255, 176, 0, 0.22) !important;
+  color: #ffd166 !important;
+  border-bottom: 2px solid #ffb000 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  font-weight: 600;
+  display: inline;
+}
+
 .diff-indicator-yellow,
 .generated-prompt-view .diff-indicator-yellow {
   display: inline-block;

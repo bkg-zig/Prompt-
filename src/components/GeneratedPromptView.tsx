@@ -12,9 +12,9 @@ import {
   Columns,
   AlignJustify,
   FileDiff,
-  ArrowRightLeft,
-  Sparkles,
-  Info
+  Info,
+  Type,
+  ListOrdered
 } from 'lucide-react';
 
 export interface GeneratedPromptViewProps {
@@ -30,6 +30,13 @@ export interface GeneratedPromptViewProps {
 export type DiffLineType = 'added' | 'removed' | 'modified' | 'equal';
 export type DiffCssClass = 'diff-line-added' | 'diff-line-removed' | 'diff-line-modified' | 'diff-line-equal';
 
+export interface DiffSegmentItem {
+  id: string;
+  type: 'added' | 'removed' | 'modified' | 'equal';
+  cssClass: string;
+  value: string;
+}
+
 export interface DiffLineItem {
   id: string;
   type: DiffLineType;
@@ -38,6 +45,7 @@ export interface DiffLineItem {
   newLineNumber?: number;
   text: string;
   previousText?: string;
+  segments?: DiffSegmentItem[];
   wordDiff?: Diff.Change[];
 }
 
@@ -47,6 +55,17 @@ export interface DiffMetrics {
   modified: number;
   unchanged: number;
   total: number;
+}
+
+export interface CharDiffResult {
+  segments: DiffSegmentItem[];
+  metrics: {
+    added: number;
+    removed: number;
+    modified: number;
+    unchanged: number;
+    total: number;
+  };
 }
 
 /**
@@ -70,10 +89,11 @@ Entwickle die Architektur mit schnellen Prototypen und lockeren Anforderungen.
 - Sicherheitsrichtlinien später prüfen`;
 
 /**
- * Computes structured line and word diffs using the 'diff' npm package,
- * classifying lines into 'diff-line-added', 'diff-line-removed', and 'diff-line-modified'.
+ * Computes structured line-level comparison using the 'diff' npm package (Diff.diffLines).
+ * Classifies lines into 'diff-line-added', 'diff-line-removed', and 'diff-line-modified',
+ * and within modified lines breaks down differences into decorated character/word segments.
  */
-function computeVisualPromptDiff(
+function computeLineLevelDiff(
   oldPrompt: string,
   newPrompt: string
 ): { lines: DiffLineItem[]; metrics: DiffMetrics } {
@@ -84,7 +104,7 @@ function computeVisualPromptDiff(
     };
   }
 
-  // 1. Line-level diff with diffLines from npm package 'diff'
+  // Line-level diff with diffLines from npm package 'diff'
   const changes = Diff.diffLines(oldPrompt || '', newPrompt || '', {
     newlineIsToken: false,
     ignoreWhitespace: false
@@ -106,7 +126,6 @@ function computeVisualPromptDiff(
     }
   }
 
-  // 2. Synthesize blocks, pairing adjacent removed + added into "modified" lines
   const lines: DiffLineItem[] = [];
   let oldLineIdx = 1;
   let newLineIdx = 1;
@@ -131,8 +150,33 @@ function computeVisualPromptDiff(
         const addLine = addedLines[j];
 
         if (remLine !== undefined && addLine !== undefined) {
-          // Word-level diff within the modified line
-          const words = Diff.diffWordsWithSpace(remLine, addLine);
+          // Compute character-level / word-level diff segments within the modified line
+          const wordDiff = Diff.diffWordsWithSpace(remLine, addLine);
+          const segments: DiffSegmentItem[] = wordDiff.map((wd, sIdx) => {
+            if (wd.added) {
+              return {
+                id: `seg-add-${sIdx}`,
+                type: 'modified' as const,
+                cssClass: 'diff-segment-modified',
+                value: wd.value
+              };
+            }
+            if (wd.removed) {
+              return {
+                id: `seg-rem-${sIdx}`,
+                type: 'removed' as const,
+                cssClass: 'diff-segment-removed',
+                value: wd.value
+              };
+            }
+            return {
+              id: `seg-eq-${sIdx}`,
+              type: 'equal' as const,
+              cssClass: 'diff-segment-equal',
+              value: wd.value
+            };
+          });
+
           lines.push({
             id: `mod-${oldLineIdx}-${newLineIdx}`,
             type: 'modified',
@@ -141,7 +185,8 @@ function computeVisualPromptDiff(
             newLineNumber: newLineIdx++,
             previousText: remLine,
             text: addLine,
-            wordDiff: words
+            segments,
+            wordDiff
           });
           modifiedCount++;
         } else if (remLine !== undefined) {
@@ -219,6 +264,88 @@ function computeVisualPromptDiff(
   };
 }
 
+/**
+ * Computes character-level comparison between 'previousMasterPrompt' and 'masterPrompt'
+ * using Diff.diffChars from the 'diff' npm package.
+ * Maps the comparison result directly to decorated segments with appropriate CSS classes:
+ * - 'diff-segment-added' (green background)
+ * - 'diff-segment-removed' (red background, strikethrough)
+ * - 'diff-segment-modified' (yellow indicator / amber background)
+ */
+function computeCharacterLevelDiff(
+  oldPrompt: string,
+  newPrompt: string
+): CharDiffResult {
+  const changes = Diff.diffChars(oldPrompt || '', newPrompt || '');
+  const segments: DiffSegmentItem[] = [];
+  let added = 0;
+  let removed = 0;
+  let modified = 0;
+  let unchanged = 0;
+
+  for (let i = 0; i < changes.length; i++) {
+    const cur = changes[i];
+    const next = changes[i + 1];
+
+    // Detect modified chunk (character deletion followed immediately by insertion)
+    if (cur.removed && next && next.added) {
+      segments.push({
+        id: `c-mod-rem-${i}`,
+        type: 'removed',
+        cssClass: 'diff-segment-removed',
+        value: cur.value
+      });
+      segments.push({
+        id: `c-mod-add-${i + 1}`,
+        type: 'modified',
+        cssClass: 'diff-segment-modified',
+        value: next.value
+      });
+      removed += cur.value.length;
+      modified += next.value.length;
+      i++;
+      continue;
+    }
+
+    if (cur.added) {
+      segments.push({
+        id: `c-add-${i}`,
+        type: 'added',
+        cssClass: 'diff-segment-added',
+        value: cur.value
+      });
+      added += cur.value.length;
+    } else if (cur.removed) {
+      segments.push({
+        id: `c-rem-${i}`,
+        type: 'removed',
+        cssClass: 'diff-segment-removed',
+        value: cur.value
+      });
+      removed += cur.value.length;
+    } else {
+      segments.push({
+        id: `c-eq-${i}`,
+        type: 'equal',
+        cssClass: 'diff-segment-equal',
+        value: cur.value
+      });
+      unchanged += cur.value.length;
+    }
+  }
+
+  return {
+    segments,
+    metrics: {
+      added,
+      removed,
+      modified,
+      unchanged,
+      total: segments.length
+    }
+  };
+}
+
 export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
   masterPrompt,
   previousMasterPrompt,
@@ -236,6 +363,9 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
   const [isDiffActive, setIsDiffActive] = useState<boolean>(() => {
     return Boolean(previousPrompt && previousPrompt.trim() !== '' && previousPrompt !== currentPrompt);
   });
+
+  // Diff granularity: Line-level vs Character-level comparison
+  const [diffGranularity, setDiffGranularity] = useState<'lines' | 'chars'>('lines');
 
   // Secondary sub-states for non-diff view and diff layout
   const [previewSubMode, setPreviewSubMode] = useState<'preview' | 'raw'>('preview');
@@ -255,9 +385,14 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
 
   const hasRealPreviousPrompt = Boolean(previousPrompt && previousPrompt.trim() !== '');
 
-  // Diff computation using the 'diff' library
-  const { lines: diffLines, metrics: diffMetrics } = useMemo(() => {
-    return computeVisualPromptDiff(effectivePreviousPrompt, currentPrompt);
+  // Line-level diff computation using Diff.diffLines from 'diff'
+  const { lines: diffLines, metrics: lineDiffMetrics } = useMemo(() => {
+    return computeLineLevelDiff(effectivePreviousPrompt, currentPrompt);
+  }, [effectivePreviousPrompt, currentPrompt]);
+
+  // Character-level diff computation using Diff.diffChars from 'diff'
+  const { segments: charSegments, metrics: charDiffMetrics } = useMemo(() => {
+    return computeCharacterLevelDiff(effectivePreviousPrompt, currentPrompt);
   }, [effectivePreviousPrompt, currentPrompt]);
 
   // Filtered diff lines for search and changes-only view
@@ -277,6 +412,19 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
     return result;
   }, [diffLines, diffFilter, searchQuery]);
 
+  // Filtered character segments for search and changes-only view
+  const displayedCharSegments = useMemo(() => {
+    let result = charSegments;
+    if (diffFilter === 'changes-only') {
+      result = result.filter((s) => s.type !== 'equal');
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((s) => s.value.toLowerCase().includes(q));
+    }
+    return result;
+  }, [charSegments, diffFilter, searchQuery]);
+
   const handleCopy = () => {
     onCopy();
     setIsCopied(true);
@@ -290,6 +438,10 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
   const handleToggleDiff = () => {
     setIsDiffActive((prev) => !prev);
   };
+
+  const activeMetrics = diffGranularity === 'lines'
+    ? { added: lineDiffMetrics.added, modified: lineDiffMetrics.modified, removed: lineDiffMetrics.removed }
+    : { added: charDiffMetrics.added, modified: charDiffMetrics.modified, removed: charDiffMetrics.removed };
 
   return (
     <div
@@ -336,7 +488,7 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
             </button>
           </div>
 
-          {/* ─── DEDICATED VISUAL DIFF TOGGLE SWITCH ─── */}
+          {/* ─── DEDICATED VISUAL DIFF TOGGLE SWITCH IN HEADER ─── */}
           <div className="flex items-center pl-3 border-l border-[#17252d]">
             <div
               className={`diff-toggle-container flex items-center gap-2.5 px-2.5 py-1 rounded transition-all cursor-pointer border ${
@@ -394,7 +546,7 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
                       : 'bg-[#17252d]/60 text-[#40515b]'
                   }`}
                 >
-                  (+{diffMetrics.added} / ~{diffMetrics.modified} / -{diffMetrics.removed})
+                  (+{activeMetrics.added} / ~{activeMetrics.modified} / -{activeMetrics.removed})
                 </span>
               </div>
             </div>
@@ -457,66 +609,96 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
         </div>
       </div>
 
-      {/* ─── Sub-Toolbar for Visual Diff Mode (Legend, Layout, Filter) ─── */}
+      {/* ─── Sub-Toolbar for Visual Diff Mode (Granularity, Legend, Layout, Filter) ─── */}
       {isDiffActive && (
         <div className="bg-[#05070a] border-b border-[#17252d] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-          {/* Color-Coded Decorator Legend */}
+          {/* Granularity & Color-Coded Decorator Legend */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="text-[#78909c] font-semibold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-              <span className="led led-busy" />
-              Diff-Indikatoren:
-            </span>
+            {/* Granularity Switch: Line-Level vs Character-Level comparison */}
+            <div className="flex items-center gap-1 p-0.5 bg-[#080d12] rounded border border-[#17252d]">
+              <button
+                type="button"
+                onClick={() => setDiffGranularity('lines')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                  diffGranularity === 'lines'
+                    ? 'bg-[#00f6ff]/15 text-[#00f6ff] border border-[#00f6ff]/40 shadow-[0_0_6px_rgba(0,246,255,0.2)]'
+                    : 'text-[#78909c] hover:text-[#d7faff]'
+                }`}
+                title="Zeilenweiser Vergleich (Line-level Diff)"
+              >
+                <ListOrdered className="w-3 h-3" />
+                <span>Line-Level</span>
+              </button>
 
-            {/* Added Lines (.diff-line-added) */}
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#39ff14]/10 border border-[#39ff14]/40 text-[#7cff5c] font-semibold text-[11px]">
+              <button
+                type="button"
+                onClick={() => setDiffGranularity('chars')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                  diffGranularity === 'chars'
+                    ? 'bg-[#00f6ff]/15 text-[#00f6ff] border border-[#00f6ff]/40 shadow-[0_0_6px_rgba(0,246,255,0.2)]'
+                    : 'text-[#78909c] hover:text-[#d7faff]'
+                }`}
+                title="Zeichenweiser Vergleich (Character-level Diff)"
+              >
+                <Type className="w-3 h-3" />
+                <span>Char-Level</span>
+              </button>
+            </div>
+
+            <div className="hidden sm:block w-[1px] h-4 bg-[#17252d]" />
+
+            {/* Added Lines / Segments (.diff-line-added / .diff-segment-added) */}
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#39ff14]/15 border border-[#39ff14]/40 text-[#7cff5c] font-semibold text-[11px]">
               <span className="w-2 h-2 rounded-full bg-[#39ff14] shadow-[0_0_6px_#39ff14] inline-block" />
-              <span>+{diffMetrics.added} Hinzugefügt (Grün)</span>
+              <span>+{activeMetrics.added} Hinzugefügt (Grün)</span>
             </div>
 
-            {/* Modified Lines (.diff-line-modified) */}
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#ffb000]/10 border border-[#ffb000]/40 text-[#ffd166] font-semibold text-[11px]">
-              <span className="diff-indicator-yellow" />
-              <span>~{diffMetrics.modified} Modifiziert (Gelber Indikator)</span>
+            {/* Modified Lines / Segments (.diff-line-modified / .diff-segment-modified) */}
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#ffb000]/15 border border-[#ffb000]/40 text-[#ffd166] font-semibold text-[11px]">
+              <span className="diff-indicator-yellow inline-block" />
+              <span>~{activeMetrics.modified} Modifiziert (Gelb)</span>
             </div>
 
-            {/* Removed Lines (.diff-line-removed) */}
+            {/* Removed Lines / Segments (.diff-line-removed / .diff-segment-removed) */}
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#ff1744]/15 border border-[#ff1744]/40 text-[#ff4d6d] font-semibold text-[11px]">
               <span className="w-2 h-2 rounded-full bg-[#ff1744] shadow-[0_0_6px_#ff1744] inline-block" />
-              <span className="line-through decoration-[#ff1744]">-{diffMetrics.removed} Gelöscht (Rot + Durchgestrichen)</span>
+              <span className="line-through decoration-[#ff1744]">-{activeMetrics.removed} Gelöscht (Rot + Strikethrough)</span>
             </div>
 
             {!hasRealPreviousPrompt && (
               <span className="hidden xl:inline-flex items-center gap-1 text-[10px] text-[#78909c] bg-[#0e151d] px-2 py-0.5 rounded border border-[#17252d]">
                 <Info className="w-3 h-3 text-[#ffb000]" />
-                Vergleich: Initial-Entwurf vs. Master-Prompt
+                Vergleich: Rohentwurf vs. Master-Prompt
               </span>
             )}
           </div>
 
-          {/* Diff Controls: Unified vs Split & Changes filter */}
+          {/* Diff Controls: Unified vs Split (for lines) & Changes filter */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 p-0.5 bg-[#080d12] rounded border border-[#17252d]">
-              <button
-                onClick={() => setDiffLayout('unified')}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  diffLayout === 'unified' ? 'bg-[#0e151d] text-[#00f6ff] font-medium' : 'text-[#78909c] hover:text-[#d7faff]'
-                }`}
-                title="Unified View (Einspaltige Zeilenfolge)"
-              >
-                <AlignJustify className="w-3 h-3" />
-                <span>Unified</span>
-              </button>
-              <button
-                onClick={() => setDiffLayout('split')}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  diffLayout === 'split' ? 'bg-[#0e151d] text-[#00f6ff] font-medium' : 'text-[#78909c] hover:text-[#d7faff]'
-                }`}
-                title="Split View (Zweispaltiger Direktvergleich)"
-              >
-                <Columns className="w-3 h-3" />
-                <span>Split</span>
-              </button>
-            </div>
+            {diffGranularity === 'lines' && (
+              <div className="flex items-center gap-1 p-0.5 bg-[#080d12] rounded border border-[#17252d]">
+                <button
+                  onClick={() => setDiffLayout('unified')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    diffLayout === 'unified' ? 'bg-[#0e151d] text-[#00f6ff] font-medium' : 'text-[#78909c] hover:text-[#d7faff]'
+                  }`}
+                  title="Unified View (Einspaltige Zeilenfolge)"
+                >
+                  <AlignJustify className="w-3 h-3" />
+                  <span>Unified</span>
+                </button>
+                <button
+                  onClick={() => setDiffLayout('split')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    diffLayout === 'split' ? 'bg-[#0e151d] text-[#00f6ff] font-medium' : 'text-[#78909c] hover:text-[#d7faff]'
+                  }`}
+                  title="Split View (Zweispaltiger Direktvergleich)"
+                >
+                  <Columns className="w-3 h-3" />
+                  <span>Split</span>
+                </button>
+              </div>
+            )}
 
             <button
               onClick={() => setDiffFilter(diffFilter === 'all' ? 'changes-only' : 'all')}
@@ -526,7 +708,7 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
                   : 'bg-[#080d12] border-[#17252d] text-[#78909c] hover:text-[#d7faff]'
               }`}
             >
-              {diffFilter === 'changes-only' ? 'Nur Änderungen' : 'Alle Zeilen'}
+              {diffFilter === 'changes-only' ? 'Nur Änderungen' : 'Alle Segmente'}
             </button>
           </div>
         </div>
@@ -609,19 +791,72 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
           </div>
         )}
 
-        {/* ─── VISUAL DIFF VIEW: WITH diff-line-added, diff-line-removed, diff-line-modified ─── */}
+        {/* ─── VISUAL DIFF VIEW: CHARACTER-LEVEL OR LINE-LEVEL COMPARISON ─── */}
         {isDiffActive && (
           <div>
-            {diffLayout === 'unified' ? (
-              /* Unified View: with precise CSS classes diff-line-added, diff-line-removed, diff-line-modified */
+            {diffGranularity === 'chars' ? (
+              /* Character-Level Comparison Stream mapped to decorated elements with CSS classes */
+              <div className="border border-[#17252d] rounded overflow-hidden bg-[#020407] p-4 text-xs font-mono leading-relaxed select-text">
+                <div className="mb-3 pb-2 border-b border-[#17252d] flex items-center justify-between text-[#78909c] text-[11px]">
+                  <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[#00f6ff]">
+                    <Type className="w-3.5 h-3.5" />
+                    Charakterweiser Diff (Diff.diffChars)
+                  </span>
+                  <span>
+                    +{charDiffMetrics.added} Chars · -{charDiffMetrics.removed} Chars · ~{charDiffMetrics.modified} Modifiziert
+                  </span>
+                </div>
+
+                <div className="whitespace-pre-wrap break-all leading-6">
+                  {displayedCharSegments.map((segment) => {
+                    if (segment.type === 'added') {
+                      return (
+                        <span
+                          key={segment.id}
+                          data-diff-type="added"
+                          className="diff-segment-added inline font-medium"
+                          title="Hinzugefügtes Zeichen-Segment"
+                        >
+                          {segment.value}
+                        </span>
+                      );
+                    }
+                    if (segment.type === 'removed') {
+                      return (
+                        <span
+                          key={segment.id}
+                          data-diff-type="removed"
+                          className="diff-segment-removed inline"
+                          title="Gelöschtes Zeichen-Segment"
+                        >
+                          {segment.value}
+                        </span>
+                      );
+                    }
+                    if (segment.type === 'modified') {
+                      return (
+                        <span
+                          key={segment.id}
+                          data-diff-type="modified"
+                          className="diff-segment-modified inline font-medium"
+                          title="Modifiziertes Zeichen-Segment"
+                        >
+                          {segment.value}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span key={segment.id} className="text-[#d7faff]/80">
+                        {segment.value}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : diffLayout === 'unified' ? (
+              /* Unified View: Line-Level with diff-line-added, diff-line-removed, diff-line-modified */
               <div className="space-y-0.5 font-mono text-xs select-text border border-[#17252d] rounded overflow-hidden bg-[#020407]">
                 {displayedDiffLines.map((line) => {
-                  /*
-                   * Visual line decoration mapped directly to:
-                   * - 'diff-line-added'
-                   * - 'diff-line-removed'
-                   * - 'diff-line-modified'
-                   */
                   let symbol = ' ';
                   if (line.type === 'added') symbol = '+';
                   else if (line.type === 'removed') symbol = '-';
@@ -665,13 +900,13 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
                             {line.previousText && (
                               <div
                                 data-diff-type="removed"
-                                className="diff-line-removed diff-deleted-text bg-[#ff1744]/15 text-[#ff4d6d] line-through decoration-[#ff1744] px-1.5 py-0.5 rounded-xs text-[11px] mb-1 inline-block w-full border-l-2 border-[#ff1744]"
+                                className="diff-line-removed diff-segment-removed diff-deleted-text bg-[#ff1744]/15 text-[#ff4d6d] line-through decoration-[#ff1744] px-1.5 py-0.5 rounded-xs text-[11px] mb-1 inline-block w-full border-l-2 border-[#ff1744]"
                               >
                                 - {line.previousText}
                               </div>
                             )}
 
-                            {/* Modified version with distinct yellow indicator */}
+                            {/* Modified version with distinct yellow indicator and inline segments */}
                             <div className="text-[#ffd166] font-medium flex items-center gap-1.5">
                               <span
                                 className="diff-indicator-yellow shrink-0"
@@ -679,29 +914,29 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
                               />
                               <span className="flex-1">
                                 +{' '}
-                                {line.wordDiff ? (
-                                  line.wordDiff.map((part, pIdx) => {
-                                    if (part.added) {
+                                {line.segments && line.segments.length > 0 ? (
+                                  line.segments.map((seg) => {
+                                    if (seg.type === 'modified') {
                                       return (
                                         <span
-                                          key={pIdx}
-                                          className="bg-[#ffb000]/25 text-[#ffd166] underline decoration-[#ffb000] font-semibold rounded-xs px-0.5"
+                                          key={seg.id}
+                                          className="diff-segment-modified bg-[#ffb000]/25 text-[#ffd166] underline decoration-[#ffb000] font-semibold rounded-xs px-0.5 mx-0.5"
                                         >
-                                          {part.value}
+                                          {seg.value}
                                         </span>
                                       );
                                     }
-                                    if (part.removed) {
+                                    if (seg.type === 'removed') {
                                       return (
                                         <span
-                                          key={pIdx}
-                                          className="bg-[#ff1744]/30 text-[#ff4d6d] line-through opacity-85 px-0.5"
+                                          key={seg.id}
+                                          className="diff-segment-removed bg-[#ff1744]/30 text-[#ff4d6d] line-through opacity-85 px-0.5 mx-0.5"
                                         >
-                                          {part.value}
+                                          {seg.value}
                                         </span>
                                       );
                                     }
-                                    return <span key={pIdx}>{part.value}</span>;
+                                    return <span key={seg.id}>{seg.value}</span>;
                                   })
                                 ) : (
                                   line.text
@@ -727,7 +962,7 @@ export const GeneratedPromptView: React.FC<GeneratedPromptViewProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#39ff14] shadow-[0_0_4px_#39ff14]" />
-                    <span>masterPrompt (Grün hinzugefügt / Gelber Indikator)</span>
+                    <span>masterPrompt (Grün / Gelber Indikator)</span>
                   </div>
                 </div>
 
